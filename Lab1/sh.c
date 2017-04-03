@@ -161,6 +161,8 @@ void error(char *fmt, ...)
 /* run_program: fork and exec a program. */
 void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 {
+	
+	
 	/* you need to fork, search for the command in argv[0],
          * setup stdin and stdout of the child process, execv it.
          * the parent should sometimes wait and sometimes not wait for
@@ -176,6 +178,44 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 	 * 
 	 * 
 	 */
+	 int status_child;
+	 pid_t pid_child;
+	 pid_child = fork();
+	
+	//fork fail, else success
+	if (pid_child < 0){
+		error ("Fork fail lol");
+	} else {
+		//This is a child process XD
+		if (pid_child == 0){
+			char cmd_buffer[MAXBUF];
+			int mode = 0;
+			int list_length = length(path_dir_list);
+			list_t* list = path_dir_list;
+			while (list_length--){
+				snprintf(cmd_buffer, MAXBUF, "%s\n%s", list->data, argv[0]);
+				if (access(cmd_buffer, mode) == 0)
+					break;
+				list = list -> succ;
+			}
+			
+			//Checks input and output
+			if (input_fd != 0){
+				dup2(input_fd, 0);
+			} else if (output_fd != 0){
+				dup2(output_fd, 0);
+			}
+			
+			execv(path, argv); 
+			close(input_fd);
+			
+		} else{
+			if(!doing_pipe && foreground){
+				int status;
+				waitpid(pid, &status, 0);
+			}
+		}
+	}
 }
 
 void parse_line(void)
