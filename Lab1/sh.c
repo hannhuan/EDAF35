@@ -178,8 +178,8 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 	 * 
 	 * 
 	 */
-	 int status_child;
 	 int pid_child = fork();
+	 int status_child;
 	
 	//fork fail, else success
 	if (pid_child < 0){
@@ -199,14 +199,16 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 			}
 			
 			//Checks input and output
-			if (input_fd != 0){
+			if (input_fd != STDIN_FILENO){
 				dup2(input_fd, STDIN_FILENO);
-			} else if (output_fd != 0){
+			} else if (output_fd != STDOUT_FILENO){
 				dup2(output_fd, STDOUT_FILENO);
 			}
 			
 			execv(cmd_buffer, argv); 
-			close(input_fd);
+			if(doing_pipe){
+				close(input_fd);
+			}
 			
 		} else{
 			if(!doing_pipe && foreground){
