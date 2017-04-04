@@ -284,6 +284,11 @@ void parse_line(void)
 
 		case AMPERSAND:
 			foreground = false;
+			
+			if(pipe(pipe_fd) != 0){
+				error("pipe error");
+			}
+			output_fd = pipe_fd[1];
 
 			/*FALLTHROUGH*/
 
