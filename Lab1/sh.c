@@ -291,9 +291,14 @@ void parse_line(void)
 
 			run_program(argv, argc, foreground, doing_pipe);
 
-			input_fd	= 0;
-			output_fd	= 0;
-			argc		= 0;
+			if(doing_pipe){
+				input_fd = pipe_fd[0];
+				close(pipe_fd[1]);
+			} else {
+				input_fd = STDIN_FILENO;
+			}
+			output_fd = STDIN_FILENO;
+			argc = 0;
 
 			if (type == NEWLINE)
 				return;
