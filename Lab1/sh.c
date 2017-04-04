@@ -179,8 +179,7 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 	 * 
 	 */
 	 int status_child;
-	 pid_t pid_child;
-	 pid_child = fork();
+	 int pid_child = fork();
 	
 	//fork fail, else success
 	if (pid_child < 0){
@@ -193,7 +192,7 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 			int list_length = length(path_dir_list);
 			list_t* list = path_dir_list;
 			while (list_length--){
-				snprintf(cmd_buffer, MAXBUF, "%s\n%s", list->data, argv[0]);
+				snprintf(cmd_buffer, MAXBUF, "%s/%s", list->data, argv[0]);
 				if (access(cmd_buffer, mode) == 0)
 					break;
 				list = list -> succ;
@@ -206,13 +205,13 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 				dup2(output_fd, 0);
 			}
 			
-			execv(path, argv); 
+			execv(cmd_buffer, argv); 
 			close(input_fd);
 			
 		} else{
 			if(!doing_pipe && foreground){
 				int status;
-				waitpid(pid, &status, 0);
+				waitpid(pid_child, &status, 0);
 			}
 		}
 	}
