@@ -187,6 +187,7 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 	} else {
 		//This is a child process XD
 		if (pid_child == 0){
+			int cmd_true = 0;
 			char cmd_buffer[MAXBUF];
 			int mode = 0;
 			int list_length = length(path_dir_list);
@@ -194,20 +195,23 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 			while (list_length--){
 				snprintf(cmd_buffer, MAXBUF, "%s/%s", list->data, argv[0]);
 				if (access(cmd_buffer, mode) == 0)
+					cmd_true = 1
 					break;
 				list = list -> succ;
 			}
 			
 			//Checks input and output
-			if (input_fd != STDIN_FILENO){
-				dup2(input_fd, STDIN_FILENO);
-			} else if (output_fd != STDOUT_FILENO){
-				dup2(output_fd, STDOUT_FILENO);
-			}
-			
-			execv(cmd_buffer, argv); 
-			if(doing_pipe){
-				close(input_fd);
+			if(cmd_true == 1){
+				if (input_fd != STDIN_FILENO){
+					dup2(input_fd, STDIN_FILENO);
+				} else if (output_fd != STDOUT_FILENO){
+					dup2(output_fd, STDOUT_FILENO);
+				}
+				
+				execv(cmd_buffer, argv); 
+				if(doing_pipe){
+					close(input_fd);
+				}
 			}
 			
 		} else{
