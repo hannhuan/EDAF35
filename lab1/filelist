@@ -1,0 +1,10 @@
+filelist
+list.c
+list.h
+list.o
+ls
+makefile
+sh
+sh.c
+sh.h
+sh.o
