@@ -142,10 +142,12 @@ static unsigned new_swap_page()
 static unsigned fifo_page_replace()
 {
 	int	page;
-	
-	page = INT_MAX; 
+        page += 1;
+        page %= RAM_PAGES;
+//	page = INT_MAX; 
 
 	assert(page < RAM_PAGES);
+        return page;
 }
 
 static unsigned second_chance_replace()
@@ -162,7 +164,26 @@ static unsigned take_phys_page()
 	unsigned		page;	/* Page to be replaced. */
 
 	page = (*replace)();
-
+        
+        coremap_entry_t* sec_page = &coremap[page];
+        if (sec_page->owner == NULL){
+            return page;
+        }else{
+            if (sec_page -> owner -> ondisk){
+                if (sec_page -> owner -> modified){
+                    write_page (page, sec_page -> page);
+                }
+                sec_page -> owner -> page =  sec_page -> page;
+            } else {
+                unsigned swap_page = new_swap_page();
+                sec_page -> owner -> page = swap_page;
+                write_page(page, swap_page);
+            }
+        }
+        sec_page -> owner -> inmemory = 0;
+        sec_page -> owner -> ondisk = 1;
+        sec_page -> owner -> modified = 0;
+        sec_page -> owner -> referenced = 0;
 	return page;
 }
 
@@ -173,6 +194,14 @@ static void pagefault(unsigned virt_page)
 	num_pagefault += 1;
 
 	page = take_phys_page();
+        page_table_entry_t* sec_page = &page_table[virt_page];
+        if(sec_page -> ondisk){
+            coremap[page].page = page_table -> page;
+            read_page(page, page_table -> page);
+        }
+        page_table -> page =  page;
+        page_table -> inmemory = 1;
+        coremap[page].owner = sec_page;
 }
 
 static void translate(unsigned virt_addr, unsigned* phys_addr, bool write)
