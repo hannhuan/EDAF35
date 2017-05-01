@@ -9,7 +9,7 @@ int main(){
     signal(SIGINT, signal_handler);
    
     while(1){
-        printf("I'm a loop...");
+        printf("I'm a loop...\n");
         fflush(stdout);
         sleep(2);
     }
@@ -18,5 +18,5 @@ int main(){
 }
 
 void signal_handler(int signum){
-    printf("Caught singal %d", signum);
+    printf("Caught singal %d \n", signum);
 }
