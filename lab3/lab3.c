@@ -1,3 +1,8 @@
+/**
+4. Man får 96/110 page faults.
+
+*/
+
 #include <assert.h>
 #include <stdarg.h>
 #include <limits.h>
@@ -15,7 +20,6 @@
 #define SWAP_PAGES	(128)	
 #define SWAP_SIZE	(SWAP_PAGES * PAGESIZE)
 #undef DEBUG
-
 #define ADD	(0)
 #define ADDI	(1)
 #define SUB	(2)
@@ -144,7 +148,6 @@ static unsigned fifo_page_replace()
 	int	page;
         page += 1;
         page %= RAM_PAGES;
-//	page = INT_MAX; 
 
 	assert(page < RAM_PAGES);
         return page;
@@ -154,9 +157,19 @@ static unsigned second_chance_replace()
 {
 	int	page;
 	
-	page = INT_MAX; 
+	
+	coremap_entry_t* coremap = &coremap[page];
+	while (coremap -> owner != NULL && coremap -> owner -> referenced){
+		coremap -> owner -> referenced = 0;
+		page += 1;
+		page %= RAM_PAGES;
+		coremap = &coremap[page];
+	}
+	
+	//page = INT_MAX; 
 
 	assert(page < RAM_PAGES);
+	return page;
 }
 
 static unsigned take_phys_page()
@@ -196,11 +209,11 @@ static void pagefault(unsigned virt_page)
 	page = take_phys_page();
         page_table_entry_t* sec_page = &page_table[virt_page];
         if(sec_page -> ondisk){
-            coremap[page].page = page_table -> page;
-            read_page(page, page_table -> page);
+            coremap[page].page = sec_page -> page;
+            read_page(page, sec_page -> page);
         }
-        page_table -> page =  page;
-        page_table -> inmemory = 1;
+        sec_page -> inmemory = 1;
+	sec_page -> page = page;
         coremap[page].owner = sec_page;
 }
 
@@ -312,7 +325,7 @@ int run(int argc, char** argv)
 	if (argc > 1)
 		file = argv[1];	
 	else
-		file = "a.s";
+		file = "fac.s";
 
 	read_program(file, memory, &ninstr);
 
@@ -489,7 +502,8 @@ int run(int argc, char** argv)
 int main(int argc, char** argv)
 {
 #if 1
-	replace = fifo_page_replace;
+//	replace = fifo_page_replace;
+	replace = second_chance_replace;
 #else
 	replace = second_chance_replace;
 #endif
