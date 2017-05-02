@@ -83,6 +83,7 @@ static coremap_entry_t		coremap[RAM_PAGES];	/* OS data structure. */
 static unsigned			memory[RAM_SIZE];	/* Hardware: RAM. */
 static unsigned			swap[SWAP_SIZE];	/* Hardware: disk. */
 static unsigned			(*replace)(void);	/* Page repl. alg. */
+static unsigned long long	disk_writes;
 
 unsigned make_instr(unsigned opcode, unsigned dest, unsigned s1, unsigned s2)
 {
@@ -129,6 +130,7 @@ static void read_page(unsigned phys_page, unsigned swap_page)
 
 static void write_page(unsigned phys_page, unsigned swap_page)
 {
+	++disk_writes;
 	memcpy(&swap[swap_page * PAGESIZE], 
 		&memory[phys_page * PAGESIZE], 
 		PAGESIZE * sizeof(unsigned));
@@ -155,19 +157,18 @@ static unsigned fifo_page_replace()
 
 static unsigned second_chance_replace()
 {
-	int	page;
+	static	int	page;
 	
-	
-	coremap_entry_t* coremap = &coremap[page];
-	while (coremap -> owner != NULL && coremap -> owner -> referenced){
-		coremap -> owner -> referenced = 0;
+//	page += 1;
+//	page %= RAM_PAGES;
+	coremap_entry_t* c_map = &coremap[page];
+
+	while (c_map -> owner != NULL && c_map -> owner -> referenced){
+		c_map -> owner -> referenced = 0;
 		page += 1;
 		page %= RAM_PAGES;
-		coremap = &coremap[page];
-	}
-	
-	//page = INT_MAX; 
 
+	}
 	assert(page < RAM_PAGES);
 	return page;
 }
@@ -186,7 +187,7 @@ static unsigned take_phys_page()
                 if (sec_page -> owner -> modified){
                     write_page (page, sec_page -> page);
                 }
-                sec_page -> owner -> page =  sec_page -> page;
+                sec_page -> owner -> page = sec_page -> page;
             } else {
                 unsigned swap_page = new_swap_page();
                 sec_page -> owner -> page = swap_page;
@@ -207,11 +208,14 @@ static void pagefault(unsigned virt_page)
 	num_pagefault += 1;
 
 	page = take_phys_page();
+
         page_table_entry_t* sec_page = &page_table[virt_page];
+
         if(sec_page -> ondisk){
             coremap[page].page = sec_page -> page;
             read_page(page, sec_page -> page);
         }
+
         sec_page -> inmemory = 1;
 	sec_page -> page = page;
         coremap[page].owner = sec_page;
@@ -502,13 +506,13 @@ int run(int argc, char** argv)
 int main(int argc, char** argv)
 {
 #if 1
-//	replace = fifo_page_replace;
-	replace = second_chance_replace;
+	replace = fifo_page_replace;
+	//replace = second_chance_replace;
 #else
 	replace = second_chance_replace;
 #endif
 
 	run(argc, argv);
 
-	printf("%llu page faults\n", num_pagefault);
+	printf("%llu page fault and %llu disk writes\n", num_pagefault, disk_writes);
 }
