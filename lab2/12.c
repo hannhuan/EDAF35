@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 void main() {
+while(1){
     sigset_t block_mask, pending_mask;
     sigemptyset(&block_mask);
 
@@ -31,4 +32,5 @@ void main() {
             printf("Signal num %d blocked during the loop.\n", signum);
         }
     }
+}
 }

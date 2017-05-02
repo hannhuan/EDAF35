@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <signal.h>
 
-int proceed = 1;
+volatile int proceed = 1;
 void alarm_handler();
 
 void main() {
